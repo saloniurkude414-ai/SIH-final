@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DataResQ — Digital Forensics & Secure Data Sanitization</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><img src="{{ url_for('static', filename='assets/dataresq_logo_mark.png') }}" alt="DataResQ"> <div><b>DataResQ</b><span>FORENSIC • SANITIZATION • RECOVERY</span></div></div>
+  <form method="post" action="{{ url_for('clear_workspace') }}"><button class="ghost" onclick="return confirm('Clear this web workspace?')">Clear Workspace</button></form>
+</header>
+<div class="layout">
+<aside>
+  <a href="#dashboard">Dashboard</a><a href="#recovery">Advanced Recovery</a><a href="#secure-file">Secure File</a><a href="#erase">File & Folder Eraser</a><a href="#analysis">Evidence Analysis</a><a href="{{ url_for('report') }}">Forensic Reports</a>
+  <div class="side-note">Browser edition of DataResQ.<br>For authorized investigations and testing only.</div>
+</aside>
+<main>
+{% with messages=get_flashed_messages(with_categories=true) %}{% if messages %}<div class="alerts">{% for cat,msg in messages %}<div class="alert {{cat}}">{{msg}}</div>{% endfor %}</div>{% endif %}{% endwith %}
+<section id="dashboard" class="hero">
+ <div><p class="eyebrow">DIGITAL FORENSICS WORKSPACE</p><h1>Secure. Recover. Verify.</h1><p>Web interface for secure data sanitization, file-signature recovery, evidence hashing and audit-ready reporting.</p></div>
+ <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="upload-box"><label>Upload evidence</label><input type="file" name="files" multiple required><button class="primary">Upload Files</button><small>Maximum 100 MB per request.</small></form>
+</section>
+<div class="cards"><div><span>UPLOADED</span><strong>{{uploaded}}</strong></div><div><span>RECOVERED</span><strong>{{recovered}}</strong></div><div><span>AUDIT EVENTS</span><strong>{{events}}</strong></div><div><span>ENGINE</span><strong>ONLINE</strong></div></div>
+<section id="recovery" class="panel"><div class="section-title"><div><p class="eyebrow">01 • RECOVERY</p><h2>Advanced Recovery</h2></div><a class="button" href="{{url_for('scan_results')}}">View scan results</a></div>
+<p class="muted">Upload files for signature inspection, or upload a forensic image such as .img/.dd/.raw and run signature carving.</p>
+<form method="post" action="{{url_for('scan')}}"><button class="primary">Scan Uploaded Evidence</button></form>
+<div class="table-wrap"><table><thead><tr><th>File</th><th>Size</th><th>Type</th><th>Modified</th><th>Action</th></tr></thead><tbody>{% for f in files %}<tr><td>{{f.name}}</td><td>{{f.stat().st_size|filesize}}</td><td>{{f.suffix or '—'}}</td><td>{{f.stat().st_mtime|int}}</td><td><form method="post" action="{{url_for('carve')}}" class="inline"><input type="hidden" name="file" value="{{f.relative_to(workspace_root)}}"><button disabled title="Use the image carving section below">Carve</button></form></td></tr>{% else %}<tr><td colspan="5" class="empty">No files uploaded yet.</td></tr>{% endfor %}</tbody></table></div>
+<div class="subpanel"><h3>Deep Signature Carving</h3><form method="post" action="{{url_for('carve')}}"><select name="file" required><option value="">Select uploaded image</option>{% for f in files %}<option value="{{f.relative_to(workspace_root)}}">{{f.name}}</option>{% endfor %}</select><button class="primary">Start Carving</button></form><p class="muted">Supported signatures include JPG, PNG, GIF, PDF, ZIP, MP3 and MP4.</p></div>
+</section>
+<section id="secure-file" class="panel"><div class="section-title"><div><p class="eyebrow">02 • DATA SECURITY</p><h2>Secure File</h2></div></div>
+<div class="grid2"><div class="subpanel"><h3>AES-256-GCM Encryption</h3><form method="post" action="{{url_for('encrypt')}}"><select name="file" required><option value="">Select file</option>{% for f in files %}<option value="{{f.relative_to(workspace_root)}}">{{f.name}}</option>{% endfor %}</select><input type="password" name="password" placeholder="Password" required><button class="primary">Encrypt & Download</button></form></div><div class="subpanel"><h3>Decrypt DataResQ File</h3><form method="post" action="{{url_for('decrypt')}}"><select name="file" required><option value="">Select .drq file</option>{% for f in files if f.suffix == '.drq' %}<option value="{{f.relative_to(workspace_root)}}">{{f.name}}</option>{% endfor %}</select><input type="password" name="password" placeholder="Password" required><button class="primary">Decrypt & Download</button></form></div></div>
+</section>
+<section id="erase" class="panel"><div class="section-title"><div><p class="eyebrow">03 • SANITIZATION</p><h2>File & Folder Eraser</h2></div></div><p class="warning">This action deletes the selected uploaded file after controlled overwriting. It is intended for authorized test evidence. Cloud storage and filesystem behavior can prevent absolute physical-media guarantees.</p><form method="post" action="{{url_for('erase')}}" class="action-form"><select name="file" required><option value="">Select file</option>{% for f in files %}<option value="{{f.relative_to(workspace_root)}}">{{f.name}}</option>{% endfor %}</select><select name="passes"><option value="1">1 overwrite pass</option><option value="2">2 overwrite passes</option><option value="3">3 overwrite passes</option></select><button class="danger" onclick="return confirm('Erase the selected uploaded file?')">Secure Erase</button></form></section>
+<section id="analysis" class="panel"><div class="section-title"><div><p class="eyebrow">04 • EVIDENCE</p><h2>Evidence Analysis</h2></div></div><p class="muted">Generate file metadata and a SHA-256 forensic baseline.</p><form method="post" action="{{url_for('analyze')}}" class="action-form"><select name="file" required><option value="">Select evidence file</option>{% for f in files %}<option value="{{f.relative_to(workspace_root)}}">{{f.name}}</option>{% endfor %}</select><button class="primary">Analyze Evidence</button></form>{% if (workspace_root if false else false) %}{% endif %}</section>
+<section class="panel"><div class="section-title"><div><p class="eyebrow">05 • REPORTING</p><h2>Forensic Report</h2></div><a class="button" href="{{url_for('report')}}">Generate & Download HTML Report</a></div><p class="muted">The report summarizes available recovery, carving, evidence-analysis and sanitization audit results for this web workspace.</p></section>
+<footer>DataResQ • Digital Forensics & Secure Data Sanitization • Web Edition</footer>
+</main></div>
+</body></html>
